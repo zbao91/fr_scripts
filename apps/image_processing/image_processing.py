@@ -255,14 +255,14 @@ class CalFaceEmbd(BaseHandler):
         model = loader_obj.load_facenet_model()
         tmp_dict = {}
         for f in files:
-            if f == '.DS_Store':
+            if 'DS_Store' in f:
                 continue
             f_path = os.path.join(facebank_path, f)
             try:
                 im = Image.open(f_path)
             except:
                 continue
-            im = transforms.ToTensor()(im).unsqueeze_(0)
+            im = transforms.ToTensor()(im).unsqueeze_(0).to(device)
             dist = model(im).detach().cpu()
             tmp_dict[f] = dist
         embd_name = '%s.pth'%(os.path.basename(facebank_path))
