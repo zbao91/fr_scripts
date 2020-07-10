@@ -41,11 +41,12 @@ class ImageAligned(BaseHandler):
         # 获取数据，如果打不开图片，则
         length = len(dirs)
         for idx, dir in enumerate(dirs):
-            if dir == '.DS_Store':
+            if dir.startswith('.'):
                 continue
             if idx % 100 == 0:
                 print(idx, '/', length)
             cur_dir = data_dir + '/%s' % dir
+            cur_error_dir = error_dir + '/%s' % dir
             files = os.listdir(cur_dir)
             if len(files) == 0:
                 remove_tree(cur_dir)
@@ -55,9 +56,12 @@ class ImageAligned(BaseHandler):
                 try:
                     img = Image.open(cur_dir + '/' + file)
                 except:
-                    has_error += 1
+                    create_dir(cur_error_dir)
+                    shutil.move(cur_dir + '/' + file, cur_error_dir + '/' + file)
+                    has_error += 0
             # 如果图片有问题，丢到error文件夹内
             if has_error > 0:
+
                 copy_tree(cur_dir, error_dir + '/' + dir)
                 print('error:', cur_dir)
                 remove_tree(cur_dir)
@@ -316,15 +320,29 @@ class FaceGroup(BaseHandler):
         将每天的人脸进行归纳，将相似的人脸放在一起
     """
     def get(self):
-        base_embd_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/facegroup_embd'
-        org_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/facegroup_test'
-        dst_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/facegrouped_test'
+        base_embd_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍/embd' #
+        org_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍'
+        dst_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍'
+        method = 2
+        if method == 1:
+            """
+                输入:文件格式：base/sub_data/img1.jpg
+                输出：
+                    * 文件格式 base/sub_data/name1/img1.jpg - 如果能识别出来是一个
+                    * 文件格式 base/sub_data/img1.jpg - 如果不能识别出来直接保持原名称          
+            """
+            self.method1(base_embd_path, org_path, dst_path)
+        elif method == 2:
+            self.method2(base_embd_path, org_path, dst_path)
+        return
+
+    def method1(self, base_embd_path, org_path, dst_path):
         embds = os.listdir(base_embd_path)
         for embd_name in embds:
             if embd_name.startswith('.'):
                 continue
             embd_path = os.path.join(base_embd_path, embd_name)
-            embd_data = torch.load(embd_path) # key为文件名称
+            embd_data = torch.load(embd_path)  # key为文件名称
             embd_2nd = copy.deepcopy(embd_data)
             name_idx = 0
             grouped_im = []
@@ -371,5 +389,34 @@ class FaceGroup(BaseHandler):
                 im_org_path = os.path.join(org_path, embd_name.split('.')[0], fname)
                 im_dst_path = os.path.join(dst_path, embd_name.split('.')[0], fname)
                 copyfile(im_org_path, im_dst_path)
+        return
+
+    def method2(self, base_embd_path, org_path, dst_path):
+        embds = os.listdir(base_embd_path)
+        for embd_name in embds:
+            if embd_name.startswith('.'):
+                continue
+            embd_path = os.path.join(base_embd_path, embd_name)
+            embd_data = torch.load(embd_path)  # key为文件名称
+            keys = sorted([int(k.split('.')[0]) for k in embd_data.keys()])
+            init_embd = None
+            init_key = None
+            for idx, key in enumerate(keys):
+                key = '%d.jpg'%key
+                if idx == 0:
+                    init_embd = embd_data[key]
+                    init_key = key
+                current_embd = embd_data[key]
+                dist = (init_embd - current_embd).norm().item()
+                if dist > 0.8:
+                    init_embd = embd_data[key]
+                    init_key = key
+                print(dist, init_key, key)
+
+            # # 将没有分类的图片放到公共目录下
+            # for fname in unique_list:
+            #     im_org_path = os.path.join(org_path, embd_name.split('.')[0], fname)
+            #     im_dst_path = os.path.join(dst_path, embd_name.split('.')[0], fname)
+            #     copyfile(im_org_path, im_dst_path)
         return
 
