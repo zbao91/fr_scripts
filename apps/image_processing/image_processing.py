@@ -15,7 +15,8 @@ from torchvision import datasets, transforms
 from distutils.dir_util import copy_tree, remove_tree
 from PIL import Image
 from torch.utils.data import DataLoader, SubsetRandomSampler
-from shutil import copyfile, copy2
+from shutil import copyfile, copy2, rmtree
+from pathlib import Path
 
 from ..handler import BaseHandler
 from models import ModelLoader
@@ -172,8 +173,8 @@ class CalFaceEmbd(BaseHandler):
         计算脸的特征向量，只能对使用mtcnn处理过的图片使用
     """
     def get(self):
-        method = 2
-        facebank_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/facegroup_test'  # 人脸库地址
+        method = 3
+        facebank_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/embd_cal_test'  # 人脸库地址
         embd_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/facegroup_embd'
         # 计算facebank的embeddings, 然后按照姓名进行归类
         if method == 1:
@@ -186,11 +187,14 @@ class CalFaceEmbd(BaseHandler):
                     continue
                 _dir = os.path.join(facebank_path, _dir)
                 self.method2(_dir, embd_path)
+        elif method == 3:
+            self.method3(facebank_path, embd_path)
         return
 
     def method1(self, facebank_path, base_path):
         """
             把所有的facebank（文档结构: name1/img1.jpg, name1/img2.jpg）中的
+            base_path: 存放embeddings的directory
         """
         if not os.path.isdir(base_path):
             os.makedirs(base_path)
@@ -265,57 +269,43 @@ class CalFaceEmbd(BaseHandler):
         torch.save(tmp_dict, embd_path)
         return
 
-    def method3(self, facebank_path, base_path):
+    def method3(self, facebank_path, embd_path):
         """
-            和method1类似，只不过把所有的数据都放到
+            说明：这里的目录结构， data/sub_data1/test|val/name1/im1.jpg
         """
-        if not os.path.isdir(base_path):
-            os.makedirs(base_path)
-        # backup old directory and create new directory
-        rename_old_dir(base_path)
-        new_dir_name = '%s_current' % (create_name(base_path, 'embd'))
-        create_dir(os.path.join(base_path, new_dir_name))
-        embd_path = os.path.join(base_path, new_dir_name, 'embd_dict.pth')  # 特征向量地址
+        list_dirs = os.listdir(facebank_path)
+        for dir in list_dirs:
+            if dir == '.DS_Store':
+                continue
+            tmp_embd_path = os.path.join(embd_path, dir)
+            create_dir(tmp_embd_path)
+            test_path = os.path.join(facebank_path, dir, 'test')
+            val_path = os.path.join(facebank_path, dir, 'val')
 
-        # 读取模型, 可以根据地址修改模型
-        ml_obj = ModelLoader()
-        facenet = ml_obj.load_facenet_model()
+            def gather_fils(tgt_path, dst_path):
+                """
+                    将embeddings文件放到指定目录下
+                """
+                dst_path = Path(dst_path).parent
+                base_name = os.path.basename(tgt_path)
+                for dir in os.listdir(tgt_path):
+                    if not 'current' in dir:
+                        continue
+                    tmp_path = os.path.join(tgt_path, dir)
+                    for tmp_f in os.listdir(tmp_path):
+                        if not 'pth' in tmp_f:
+                            continue
+                        shutil.move(os.path.join(tmp_path, tmp_f), os.path.join(dst_path, '%s_%s' % (base_name, tmp_f)))
 
-        def collate_pil(x):
-            out_x, out_y = [], []
-            for xx, yy in x:
-                out_x.append(xx)
-                out_y.append(yy)
-            return out_x, out_y
-
-        # 读取人脸库的数据，然后生成embeddings
-        transf = transforms.Compose([
-            np.float32,
-            transforms.ToTensor(),
-            fixed_image_standardization
-
-        ])
-        dataset = datasets.ImageFolder(facebank_path, transform=transf)
-        name_dict = dict((dataset.class_to_idx[i], i) for i in dataset.class_to_idx)
-        dataset.idx_to_class = {i: c for c, i in dataset.class_to_idx.items()}
-        val_dataset = DataLoader(
-            dataset,
-            num_workers=4,
-            batch_size=4,
-            collate_fn=collate_pil
-        )
-        embd_dict = {}  # key: name, value: list of embd
-        for idex, (x, y) in enumerate(val_dataset):
-            input_x = torch.stack(x).to(device)
-            pred_y = facenet(input_x).detach().cpu()
-            for idx in range(len(pred_y)):
-                name = name_dict.get(y[idx])
-                embd = pred_y[idx]
-                if not name in embd_dict:
-                    embd_dict[name] = [embd]
-                else:
-                    embd_dict[name].append(embd)
-        torch.save(embd_dict, embd_path)
+            self.method1(test_path, tmp_embd_path)
+            # 将文件移动到指定位置
+            gather_fils(tmp_embd_path, tmp_embd_path)
+            self.method1(val_path, tmp_embd_path)
+            gather_fils(tmp_embd_path, tmp_embd_path)
+            for tmp_f in os.listdir(embd_path):
+                tmp_path = os.path.join(embd_path, tmp_f)
+                if os.path.isdir(tmp_path):
+                    rmtree(tmp_path)
         return
 
 
