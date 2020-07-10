@@ -11,7 +11,9 @@
 """
 
 from .image_processing import imp_urls
+from .facenet import facenet_urls
 
 urls = []
 urls.extend(imp_urls)
+urls.extend(facenet_urls)
 

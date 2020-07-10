@@ -173,9 +173,9 @@ class CalFaceEmbd(BaseHandler):
         计算脸的特征向量，只能对使用mtcnn处理过的图片使用
     """
     def get(self):
-        method = 3
-        facebank_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/embd_cal_test'  # 人脸库地址
-        embd_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/facegroup_embd'
+        method = 2
+        facebank_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍'  # 人脸库地址
+        embd_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/未命名_embd'
         # 计算facebank的embeddings, 然后按照姓名进行归类
         if method == 1:
             self.method1(facebank_path, embd_path)
@@ -258,7 +258,10 @@ class CalFaceEmbd(BaseHandler):
             if f == '.DS_Store':
                 continue
             f_path = os.path.join(facebank_path, f)
-            im = Image.open(f_path)
+            try:
+                im = Image.open(f_path)
+            except:
+                continue
             im = transforms.ToTensor()(im).unsqueeze_(0)
             dist = model(im).detach().cpu()
             tmp_dict[f] = dist
@@ -307,7 +310,6 @@ class CalFaceEmbd(BaseHandler):
                 if os.path.isdir(tmp_path):
                     rmtree(tmp_path)
         return
-
 
 class FaceGroup(BaseHandler):
     """
