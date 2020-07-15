@@ -30,14 +30,17 @@ class ImageAligned(BaseHandler):
         """
             使用mtcnn截图图片人头
         """
-        base_data_path = '/home/huasu/Desktop/project/face_recognition/data/auto_machine'
-        backup_path = '/home/huasu/Data/face_recognition/auto_machine'
+        base_data_path = '/home/huasu/Desktop/project/face_recognition/data'
+        backup_path = '/home/huasu/Data/face_recognition'
         current_date = datetime.date.today().strftime('%Y%m%d')
+
+        source = self.get_argument('source', 'auto_machine')
         data_dir = self.get_argument('data_dir', current_date)
-        data_dir = os.path.join(base_data_path, data_dir)
+        data_dir = os.path.join(base_data_path, source, data_dir)
+
         error_dir = data_dir + '_error'
         bakup_dir = self.get_argument('bakup_dir', current_date)
-        bakup_dir = os.path.join(backup_path, bakup_dir)
+        bakup_dir = os.path.join(backup_path, source, bakup_dir)
 
         # 读取模型
         loader_obj = ModelLoader()
@@ -111,6 +114,7 @@ class ImageAligned(BaseHandler):
         for name in names:
             if os.path.isdir(data_dir + '/' + name):
                 remove_tree(data_dir + '/' + name)
+                shutil.move(data_dir + '/' + name + '_cropped', data_dir + '/' + name)
         return
 
     def collate_pil(self, x):
@@ -184,8 +188,14 @@ class CalFaceEmbd(BaseHandler):
     """
     def get(self):
         method = 2
+        base_path = '/home/huasu/Desktop/project/face_recognition/data'
+        source = self.get_argument('source', '')
+        current_date = datetime.date.today().strftime('%Y%m%d')
+        facebank_path = self.get_argument('facebank_path', '')
+
         facebank_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍'  # 人脸库地址
         embd_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/未命名_embd'
+
         # 计算facebank的embeddings, 然后按照姓名进行归类
         if method == 1:
             self.method1(facebank_path, embd_path)
