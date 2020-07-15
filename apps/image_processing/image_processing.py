@@ -189,12 +189,10 @@ class CalFaceEmbd(BaseHandler):
     def get(self):
         method = self.get_argument('method', '2')
         method = int(method)
-        print(method)
         base_path = '/home/huasu/Desktop/project/face_recognition/data'
         current_date = datetime.date.today().strftime('%Y%m%d')
         source = self.get_argument('source', 'auto_machine')
         facebank_path = os.path.join(base_path, source, current_date)
-        print(facebank_path, method)
         embd_path = os.path.join(base_path, source, current_date + '_embd')
 
         # 计算facebank的embeddings, 然后按照姓名进行归类
@@ -203,6 +201,7 @@ class CalFaceEmbd(BaseHandler):
         # 获取目录下的所有照片，然后计算embeddings
         elif method == 2:
             dir_list = os.listdir(facebank_path)
+            print(dir_list)
             for _dir in dir_list:
                 if _dir.startswith('.'):
                     continue
