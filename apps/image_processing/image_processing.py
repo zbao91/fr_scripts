@@ -206,6 +206,7 @@ class CalFaceEmbd(BaseHandler):
                 if _dir.startswith('.'):
                     continue
                 _dir = os.path.join(facebank_path, _dir)
+                print(_dir)
                 self.method2(_dir, embd_path)
         elif method == 3:
             self.method3(facebank_path, embd_path)
