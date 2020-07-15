@@ -108,6 +108,7 @@ class ImageAligned(BaseHandler):
             print('\rBatch {} of {}'.format(i + 1, len(loader)))
 
         for name in names:
+            print(name)
             if os.path.isdir(data_dir + '/' + name):
                 remove_tree(data_dir + '/' + name)
                 print(data_dir + '/' + name + '_cropped', data_dir + '/' + name)
