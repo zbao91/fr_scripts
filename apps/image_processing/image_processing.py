@@ -104,16 +104,13 @@ class ImageAligned(BaseHandler):
                 if not os.path.isdir(bakup_dir):
                     os.mkdir(bakup_dir)
 
-                if not os.path.isdir(bakup_dir + '/' + name):
-                    os.mkdir(bakup_dir + '/' + name)
-
-                shutil.move(data_dir + '/' + k, bakup_dir + '/' + name)
-                # os.remove(data_dir + '/' + k)
+                shutil.move(data_dir + '/' + k, bakup_dir)
             print('\rBatch {} of {}'.format(i + 1, len(loader)))
 
         for name in names:
             if os.path.isdir(data_dir + '/' + name):
                 remove_tree(data_dir + '/' + name)
+                print(data_dir + '/' + name + '_cropped', data_dir + '/' + name)
                 shutil.move(data_dir + '/' + name + '_cropped', data_dir + '/' + name)
         return
 
@@ -190,6 +187,7 @@ class CalFaceEmbd(BaseHandler):
         method = self.get_argument('method', '2')
         method = int(method)
         base_path = '/home/huasu/Desktop/project/face_recognition/data'
+
         current_date = datetime.date.today().strftime('%Y%m%d')
         source = self.get_argument('source', 'auto_machine')
         facebank_path = os.path.join(base_path, source, current_date)
