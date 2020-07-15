@@ -278,6 +278,7 @@ class CalFaceEmbd(BaseHandler):
             if 'DS_Store' in f:
                 continue
             f_path = os.path.join(facebank_path, f)
+            print(f_path)
             try:
                 im = Image.open(f_path)
             except:
