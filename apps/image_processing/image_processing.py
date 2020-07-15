@@ -200,6 +200,7 @@ class CalFaceEmbd(BaseHandler):
             self.method1(facebank_path, embd_path)
         # 获取目录下的所有照片，然后计算embeddings
         elif method == 2:
+            print(facebank_path)
             dir_list = os.listdir(facebank_path)
             print(dir_list)
             for _dir in dir_list:
