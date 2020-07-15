@@ -10,6 +10,7 @@ import torch
 import pickle as pkl
 import numpy as np
 import copy
+import datetime
 
 from torchvision import datasets, transforms
 from distutils.dir_util import copy_tree, remove_tree
@@ -29,9 +30,14 @@ class ImageAligned(BaseHandler):
         """
             使用mtcnn截图图片人头
         """
-        data_dir = '/home/huasu/Desktop/facenet/files/data/Asian'
-        error_dir = '/home/huasu/Desktop/facenet/files/data/photos_error'
-        bakup_dir = '/home/huasu/Data/asian'
+        base_data_path = '/home/huasu/Desktop/project/face_recognition/data/auto_machine'
+        backup_path = '/home/huasu/Data/face_recognition/auto_machine'
+        current_date = datetime.date.today().strftime('%Y%m%d')
+        data_dir = self.get_argument('data_dir', current_date)
+        data_dir = os.path.join(base_data_path, data_dir)
+        error_dir = data_dir + '_error'
+        bakup_dir = self.get_argument('bakup_dir', current_date)
+        bakup_dir = os.path.join(backup_path, bakup_dir)
 
         # 读取模型
         loader_obj = ModelLoader()
@@ -187,7 +193,7 @@ class CalFaceEmbd(BaseHandler):
         elif method == 2:
             dir_list = os.listdir(facebank_path)
             for _dir in dir_list:
-                if _dir == '.DS_Store':
+                if _dir.startswith('.'):
                     continue
                 _dir = os.path.join(facebank_path, _dir)
                 self.method2(_dir, embd_path)
@@ -320,9 +326,9 @@ class FaceGroup(BaseHandler):
         将每天的人脸进行归纳，将相似的人脸放在一起
     """
     def get(self):
-        base_embd_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍/embd' #
-        org_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍'
-        dst_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍'
+        base_embd_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍/自助机抓拍_cropped_embd' #
+        org_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍/自助机抓拍_cropped'
+        dst_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍/自助机抓拍_grouped'
         method = 2
         if method == 1:
             """
@@ -401,22 +407,33 @@ class FaceGroup(BaseHandler):
             keys = sorted([int(k.split('.')[0]) for k in embd_data.keys()])
             init_embd = None
             init_key = None
+            groups_list = []
+            tmp_list = []
             for idx, key in enumerate(keys):
                 key = '%d.jpg'%key
                 if idx == 0:
                     init_embd = embd_data[key]
                     init_key = key
+                    tmp_list.append(key)
                 current_embd = embd_data[key]
                 dist = (init_embd - current_embd).norm().item()
+                print(dist, init_key, key)
                 if dist > 0.8:
                     init_embd = embd_data[key]
                     init_key = key
-                print(dist, init_key, key)
+                    groups_list.append(tmp_list)
+                    tmp_list = [init_key]
+                else:
+                    tmp_list.append(key)
+            # 最后一组
+            groups_list.append(tmp_list)
 
-            # # 将没有分类的图片放到公共目录下
-            # for fname in unique_list:
-            #     im_org_path = os.path.join(org_path, embd_name.split('.')[0], fname)
-            #     im_dst_path = os.path.join(dst_path, embd_name.split('.')[0], fname)
-            #     copyfile(im_org_path, im_dst_path)
+            for idx, group in enumerate(groups_list):
+                current_dst_path = os.path.join(dst_path, str(idx))
+                create_dir(current_dst_path)
+                for im in group:
+                    org_im_path = os.path.join(org_path, im)
+                    dst_im_path = os.path.join(current_dst_path, im)
+                    shutil.copy(org_im_path, dst_im_path)
         return
 
