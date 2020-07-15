@@ -187,14 +187,14 @@ class CalFaceEmbd(BaseHandler):
         计算脸的特征向量，只能对使用mtcnn处理过的图片使用
     """
     def get(self):
-        method = 2
+        method = self.get_argument('method', '2')
+        method = int(method)
         base_path = '/home/huasu/Desktop/project/face_recognition/data'
-        source = self.get_argument('source', '')
         current_date = datetime.date.today().strftime('%Y%m%d')
         facebank_path = self.get_argument('facebank_path', '')
-
-        facebank_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍'  # 人脸库地址
-        embd_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/未命名_embd'
+        source = self.get_argument('source', 'auto_machine')
+        facebank_path = os.path.join(facebank_path, source, current_date)
+        embd_path = os.path.join(base_path, source, current_date + '_embd')
 
         # 计算facebank的embeddings, 然后按照姓名进行归类
         if method == 1:
@@ -336,10 +336,15 @@ class FaceGroup(BaseHandler):
         将每天的人脸进行归纳，将相似的人脸放在一起
     """
     def get(self):
-        base_embd_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍/自助机抓拍_cropped_embd' #
-        org_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍/自助机抓拍_cropped'
-        dst_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/face_data/自助机抓拍/自助机抓拍_grouped'
-        method = 2
+
+        method = self.get_argument('method', '2')
+        method = int(method)
+        base_path = '/home/huasu/Desktop/project/face_recognition/data'
+        current_date = datetime.date.today().strftime('%Y%m%d')
+        source = self.get_argument('source', 'auto_machine')
+        base_embd_path = os.path.join(base_path, source, current_date+'_embd')
+        org_path = os.path.join(base_path, source, current_date)
+        dst_path = os.path.join(base_path, source, current_date + '_grouped')
         if method == 1:
             """
                 输入:文件格式：base/sub_data/img1.jpg
