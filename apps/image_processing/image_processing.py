@@ -189,6 +189,7 @@ class CalFaceEmbd(BaseHandler):
     def get(self):
         method = self.get_argument('method', '2')
         method = int(method)
+        print(method)
         base_path = '/home/huasu/Desktop/project/face_recognition/data'
         current_date = datetime.date.today().strftime('%Y%m%d')
         source = self.get_argument('source', 'auto_machine')
