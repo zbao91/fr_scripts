@@ -191,9 +191,8 @@ class CalFaceEmbd(BaseHandler):
         method = int(method)
         base_path = '/home/huasu/Desktop/project/face_recognition/data'
         current_date = datetime.date.today().strftime('%Y%m%d')
-        facebank_path = self.get_argument('facebank_path', '')
         source = self.get_argument('source', 'auto_machine')
-        facebank_path = os.path.join(facebank_path, source, current_date)
+        facebank_path = os.path.join(base_path, source, current_date)
         embd_path = os.path.join(base_path, source, current_date + '_embd')
 
         # 计算facebank的embeddings, 然后按照姓名进行归类
