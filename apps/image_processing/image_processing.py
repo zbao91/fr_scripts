@@ -32,6 +32,9 @@ class ImageAligned(BaseHandler):
         """
         base_data_path = '/home/huasu/Desktop/project/face_recognition/data'
         backup_path = '/home/huasu/Data/face_recognition'
+        backup_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/data/tmp_backup'
+        base_data_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/data'
+
         current_date = datetime.date.today().strftime('%Y%m%d')
 
         source = self.get_argument('source', 'auto_machine')
@@ -100,19 +103,17 @@ class ImageAligned(BaseHandler):
                 k = '/'.join(k.split('/')[-2:])
                 name = k.split('/')[-2]
                 names.append(name)
-
                 if not os.path.isdir(bakup_dir):
-                    os.mkdir(bakup_dir)
-
+                    os.makedirs(bakup_dir)
                 shutil.move(data_dir + '/' + k, bakup_dir)
             print('\rBatch {} of {}'.format(i + 1, len(loader)))
 
         for name in names:
-            print(name)
             if os.path.isdir(data_dir + '/' + name):
                 remove_tree(data_dir + '/' + name)
-                print(data_dir + '/' + name + '_cropped', data_dir + '/' + name)
-                shutil.move(data_dir + '/' + name + '_cropped', data_dir + '/' + name)
+                remove_tree(data_dir)
+                os.rename(data_dir + '_cropped', data_dir)
+
         return
 
     def collate_pil(self, x):
@@ -188,6 +189,7 @@ class CalFaceEmbd(BaseHandler):
         method = self.get_argument('method', '2')
         method = int(method)
         base_path = '/home/huasu/Desktop/project/face_recognition/data'
+        #base_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/data'
 
         current_date = datetime.date.today().strftime('%Y%m%d')
         source = self.get_argument('source', 'auto_machine')
@@ -199,15 +201,12 @@ class CalFaceEmbd(BaseHandler):
             self.method1(facebank_path, embd_path)
         # 获取目录下的所有照片，然后计算embeddings
         elif method == 2:
-            print(facebank_path)
             dir_list = os.listdir(facebank_path)
-            print(dir_list)
             for _dir in dir_list:
                 if _dir.startswith('.'):
                     continue
                 _dir = os.path.join(facebank_path, _dir)
-                print(_dir)
-                self.method2(_dir, embd_path)
+                self.method2(_dir, facebank_path)
         elif method == 3:
             self.method3(facebank_path, embd_path)
         return
@@ -342,11 +341,12 @@ class FaceGroup(BaseHandler):
         method = self.get_argument('method', '2')
         method = int(method)
         base_path = '/home/huasu/Desktop/project/face_recognition/data'
+        base_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/data'
         current_date = datetime.date.today().strftime('%Y%m%d')
         source = self.get_argument('source', 'auto_machine')
-        base_embd_path = os.path.join(base_path, source, current_date+'_embd')
+        base_embd_path = os.path.join(base_path, source, current_date)
         org_path = os.path.join(base_path, source, current_date)
-        dst_path = os.path.join(base_path, source, current_date + '_grouped')
+        dst_path = os.path.join(base_path, source, current_date)
         if method == 1:
             """
                 输入:文件格式：base/sub_data/img1.jpg
@@ -356,7 +356,7 @@ class FaceGroup(BaseHandler):
             """
             self.method1(base_embd_path, org_path, dst_path)
         elif method == 2:
-            self.method2(base_embd_path, org_path, dst_path)
+            self.method2(base_embd_path, org_path)
         return
 
     def method1(self, base_embd_path, org_path, dst_path):
@@ -414,12 +414,15 @@ class FaceGroup(BaseHandler):
                 copyfile(im_org_path, im_dst_path)
         return
 
-    def method2(self, base_embd_path, org_path, dst_path):
+    def method2(self, base_embd_path, org_path):
         embds = os.listdir(base_embd_path)
         for embd_name in embds:
             if embd_name.startswith('.'):
                 continue
+            if not '.pth' in embd_name:
+                continue
             embd_path = os.path.join(base_embd_path, embd_name)
+            print(embd_path)
             embd_data = torch.load(embd_path)  # key为文件名称
             keys = sorted([int(k.split('.')[0]) for k in embd_data.keys()])
             init_embd = None
