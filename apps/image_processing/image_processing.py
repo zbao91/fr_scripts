@@ -22,35 +22,31 @@ from pathlib import Path
 from ..handler import BaseHandler
 from models import ModelLoader
 from ..tools import fixed_image_standardization, CompareByEmbd
-from config.config import device
+from config.config import device, backup_path, project_path, project, sub_project
 from utils.common import create_name, rename_old_dir, create_dir
+
+category = 'data'
 
 class ImageAligned(BaseHandler):
     def get(self):
         """
             使用mtcnn截图图片人头
         """
-        base_data_path = '/home/huasu/Desktop/project/face_recognition/data'
-        backup_path = '/home/huasu/Data/face_recognition'
-        backup_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/data/tmp_backup'
-        base_data_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/data'
-
+        # define source of image and where backup images
         current_date = datetime.date.today().strftime('%Y%m%d')
-
         source = self.get_argument('source', 'auto_machine')
         data_dir = self.get_argument('data_dir', current_date)
-        data_dir = os.path.join(base_data_path, source, data_dir)
-
+        data_dir = os.path.join(project_path, category, source, data_dir)
         error_dir = data_dir + '_error'
         bakup_dir = self.get_argument('bakup_dir', current_date)
-        bakup_dir = os.path.join(backup_path, source, bakup_dir)
+        bakup_dir = os.path.join(backup_path, project, category, source, bakup_dir)
 
-        # 读取模型
+        # load models
         loader_obj = ModelLoader()
         model = loader_obj.load_mtcnn_model()
         dirs = os.listdir(data_dir)
 
-        # 获取数据，如果打不开图片，则
+        # check whether images are valid
         length = len(dirs)
         for idx, dir in enumerate(dirs):
             if dir.startswith('.'):
@@ -105,15 +101,17 @@ class ImageAligned(BaseHandler):
                 names.append(name)
                 if not os.path.isdir(bakup_dir):
                     os.makedirs(bakup_dir)
-                shutil.move(data_dir + '/' + k, bakup_dir)
+                try:
+                    shutil.move(data_dir + '/' + k, bakup_dir)
+                except:
+                    pass
             print('\rBatch {} of {}'.format(i + 1, len(loader)))
 
         for name in names:
             if os.path.isdir(data_dir + '/' + name):
                 remove_tree(data_dir + '/' + name)
-                remove_tree(data_dir)
-                os.rename(data_dir + '_cropped', data_dir)
-
+        remove_tree(data_dir)
+        os.rename(data_dir + '_cropped', data_dir)
         return
 
     def collate_pil(self, x):
@@ -188,13 +186,10 @@ class CalFaceEmbd(BaseHandler):
     def get(self):
         method = self.get_argument('method', '2')
         method = int(method)
-        base_path = '/home/huasu/Desktop/project/face_recognition/data'
-        #base_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/data'
-
         current_date = datetime.date.today().strftime('%Y%m%d')
         source = self.get_argument('source', 'auto_machine')
-        facebank_path = os.path.join(base_path, source, current_date)
-        embd_path = os.path.join(base_path, source, current_date + '_embd')
+        facebank_path = os.path.join(project_path, category, source, current_date)
+        embd_path = os.path.join(project_path, category, source, current_date + '_embd')
 
         # 计算facebank的embeddings, 然后按照姓名进行归类
         if method == 1:
@@ -340,13 +335,13 @@ class FaceGroup(BaseHandler):
 
         method = self.get_argument('method', '2')
         method = int(method)
-        base_path = '/home/huasu/Desktop/project/face_recognition/data'
-        base_path = '/Users/zhiqibao/Desktop/Work_Wasu/人脸识别/data'
         current_date = datetime.date.today().strftime('%Y%m%d')
         source = self.get_argument('source', 'auto_machine')
-        base_embd_path = os.path.join(base_path, source, current_date)
-        org_path = os.path.join(base_path, source, current_date)
-        dst_path = os.path.join(base_path, source, current_date)
+        base_embd_path = os.path.join(project_path, category, source, current_date)
+        org_path = os.path.join(project_path, category, source, current_date)
+        dst_path = os.path.join(project_path, category, source, current_date)
+        bakup_dir = self.get_argument('bakup_dir', current_date)
+        bakup_dir = os.path.join(backup_path, project, category, source, bakup_dir)
         if method == 1:
             """
                 输入:文件格式：base/sub_data/img1.jpg
@@ -356,7 +351,7 @@ class FaceGroup(BaseHandler):
             """
             self.method1(base_embd_path, org_path, dst_path)
         elif method == 2:
-            self.method2(base_embd_path, org_path)
+            self.method2(base_embd_path, org_path, bakup_dir)
         return
 
     def method1(self, base_embd_path, org_path, dst_path):
@@ -414,30 +409,29 @@ class FaceGroup(BaseHandler):
                 copyfile(im_org_path, im_dst_path)
         return
 
-    def method2(self, base_embd_path, org_path):
+    def method2(self, base_embd_path, org_path, bakup_dir):
         embds = os.listdir(base_embd_path)
         for embd_name in embds:
             if embd_name.startswith('.'):
                 continue
             if not '.pth' in embd_name:
                 continue
+            file_name = embd_name.split('.')[0]
             embd_path = os.path.join(base_embd_path, embd_name)
-            print(embd_path)
             embd_data = torch.load(embd_path)  # key为文件名称
-            keys = sorted([int(k.split('.')[0]) for k in embd_data.keys()])
+            keys = sorted([k.split('.')[0] for k in embd_data.keys()])
             init_embd = None
             init_key = None
             groups_list = []
             tmp_list = []
             for idx, key in enumerate(keys):
-                key = '%d.jpg'%key
+                key = '%s.jpg'%key
                 if idx == 0:
                     init_embd = embd_data[key]
                     init_key = key
                     tmp_list.append(key)
                 current_embd = embd_data[key]
                 dist = (init_embd - current_embd).norm().item()
-                print(dist, init_key, key)
                 if dist > 0.8:
                     init_embd = embd_data[key]
                     init_key = key
@@ -447,13 +441,23 @@ class FaceGroup(BaseHandler):
                     tmp_list.append(key)
             # 最后一组
             groups_list.append(tmp_list)
-
+            current_dst_path = os.path.join(org_path, file_name + '_grouped')
             for idx, group in enumerate(groups_list):
-                current_dst_path = os.path.join(dst_path, str(idx))
-                create_dir(current_dst_path)
+                tmp_current_dst_path = os.path.join(current_dst_path, str(idx))
+                create_dir(tmp_current_dst_path)
                 for im in group:
-                    org_im_path = os.path.join(org_path, im)
-                    dst_im_path = os.path.join(current_dst_path, im)
+                    org_im_path = os.path.join(org_path, file_name, im)
+                    dst_im_path = os.path.join(tmp_current_dst_path, im)
                     shutil.copy(org_im_path, dst_im_path)
+            os.remove(os.path.join(base_embd_path, embd_name))
+
+            #  backup ungrouped images
+            if not os.path.isdir(bakup_dir):
+                os.makedirs(bakup_dir)
+            try:
+                shutil.move(os.path.join(org_path, file_name), bakup_dir+'_aligned')
+            except:
+                pass
+            os.rename(current_dst_path, current_dst_path.replace('_grouped', ''))
         return
 
