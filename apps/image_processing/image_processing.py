@@ -461,3 +461,22 @@ class FaceGroup(BaseHandler):
             os.rename(current_dst_path, current_dst_path.replace('_grouped', ''))
         return
 
+class DeleteSingle(BaseHandler):
+    """
+        将每天的人脸进行归纳，将相似的人脸放在一起
+    """
+    def get(self):
+        current_date = datetime.date.today().strftime('%Y%m%d')
+        source = self.get_argument('source', 'auto_machine')
+        base_embd_path = os.path.join(project_path, category, source, current_date)
+        for parent_dir in os.listdir(base_embd_path):
+            if parent_dir.startswith('.'):
+                continue
+            for child_dir in os.listdir(os.path.join(base_embd_path, parent_dir)):
+                if child_dir.startswith('.'):
+                    continue
+                tmp_path = os.path.join(os.path.join(base_embd_path, parent_dir) , child_dir)
+                if len(os.listdir(tmp_path)) < 2:
+                    remove_tree(tmp_path)
+
+        return
