@@ -2,6 +2,8 @@ import time
 import torch
 
 from torchvision import transforms as F
+from PIL import Image
+from torchvision.transforms import ToTensor
 
 class BatchTimer(object):
     """Batch timing class.
@@ -81,3 +83,36 @@ def CompareByImage(model, device, imgs):
     embeddings = model(aligned).detach().cpu()
     dists = (embeddings[0] - embeddings[1]).norm().item()
     return dists
+
+class Image_Processing():
+    """
+    图片处理
+    """
+    def __init__(self):
+        pass
+
+    def read_img(self, imgs_path):
+        """
+        read image
+        """
+        tmp_list = []
+        for i in imgs_path:
+            img = Image.open(i)
+            tmp_list.append(self.img_convert(img))
+        return tmp_list
+
+    def img_convert(self, img):
+        """
+        convert img from other format to RGB format
+        """
+        if img.mode == 'RGBA':
+            try:
+                img.load()
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                background.paste(img, mask=img.split()[3])
+                background.save("sample_2.jpg", "JPEG", quality=100)
+                img = Image.open("sample_2.jpg")
+            except:
+                raise Exception('error')
+        img = ToTensor()(img)
+        return img

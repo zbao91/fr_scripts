@@ -9,6 +9,7 @@ import datetime
 from pathlib import Path
 from shutil import move
 
+
 def create_name(_path, prefix, is_datetime=True):
     """
         create name with prefix and datetime
@@ -44,13 +45,12 @@ def create_dir(path):
         os.makedirs(path)
     return
 
-
-
-
-
-
-
-
-
+def log_recording(file_path, info, _type):
+    """
+    recording infos to specific path
+    """
+    with open(file_path, _type) as f:
+        f.write('%s\n'%info)
+    return
 
 
