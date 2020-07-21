@@ -124,7 +124,6 @@ def pass_epoch(
         ed_idx = st_idx + args.batch_size
         # get current predict images
         args.tmp_test_files = [tmp_f[0].replace(args.img_path, '') for tmp_f in loader.dataset.samples[st_idx: ed_idx]]
-        print('x size', x.size())
         x = x.to(device)
         y = y.to(device)
         y_pred = model(x)

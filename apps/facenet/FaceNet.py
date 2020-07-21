@@ -320,7 +320,6 @@ class FineTune(BaseHandler):
                     [epoch, vmets_train.get('acc', 0).item(), loss_train.item(), vmets_test.get('acc', 0).item(),
                      loss_test.item()])
 
-            # print(model_prefix)
             cur_acc = float(vmets_test.get('acc'))
             if epoch == 1:
                 highest_acc = cur_acc
