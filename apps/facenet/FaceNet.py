@@ -127,7 +127,7 @@ class FineTune(BaseHandler):
         parser.add_argument('--lr', default=0.01, help='learning rate of model')
         parser.add_argument('--type', default='train', help='which process for this script')
         parser.add_argument('--tag', type=int, default=1, help='finetune id')
-        parser.add_argument('--train-amount', type=int, default=5000,
+        parser.add_argument('--train-amount', type=int, default=20000,
                             help='how many data will be used to finetune pretrianed model')
         parser.add_argument('--train-ratio', type=float, default=0.7, help='train/test ratio')
         parser.add_argument('--nGPU', type=int, default=torch.cuda.device_count(), help='number of gpu')
