@@ -122,6 +122,7 @@ def pass_epoch(
     for i_batch, (x, y) in enumerate(loader):
         st_idx = i_batch * args.batch_size
         ed_idx = st_idx + args.batch_size
+
         # get current predict images
         args.tmp_test_files = [tmp_f[0].replace(args.img_path, '') for tmp_f in loader.dataset.samples[st_idx: ed_idx]]
         x = x.to(device)
