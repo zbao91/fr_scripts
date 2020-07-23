@@ -184,7 +184,7 @@ class CalFaceEmbd(BaseHandler):
         计算脸的特征向量，只能对使用mtcnn处理过的图片使用
     """
     def get(self):
-        method = self.get_argument('method', '2')
+        method = self.get_argument('method', '4')
         method = int(method)
         current_date = datetime.date.today().strftime('%Y%m%d')
         source = self.get_argument('source', 'auto_machine')
@@ -204,12 +204,19 @@ class CalFaceEmbd(BaseHandler):
                 self.method2(_dir, facebank_path)
         elif method == 3:
             self.method3(facebank_path, embd_path)
+        elif method == 4:
+            self.method4(facebank_path, embd_path)
         return
 
+    # calcualte embeddings for facebank_path with name/imgs structures
     def method1(self, facebank_path, base_path):
         """
             把所有的facebank（文档结构: name1/img1.jpg, name1/img2.jpg）中的
             base_path: 存放embeddings的directory
+            saved embeddings
+            {
+                'name' : [embd1, embd2]
+            }
         """
         if not os.path.isdir(base_path):
             os.makedirs(base_path)
@@ -261,9 +268,14 @@ class CalFaceEmbd(BaseHandler):
         torch.save(embd_dict, embd_path)
         return
 
+    # calculate embeddings for all images under facebank_path
     def method2(self, facebank_path, embd_path):
         """
          获取路径下所有的图片，然后转化成tensor，然后计算embeddings, 并保存
+         saved embeddings
+            {
+                'file_name' : embedding
+            }
         """
         files = os.listdir(facebank_path)
         loader_obj = ModelLoader()
@@ -288,9 +300,20 @@ class CalFaceEmbd(BaseHandler):
         torch.save(tmp_dict, embd_path)
         return
 
+    # calculate the facebank with structure data/test|val/images
     def method3(self, facebank_path, embd_path):
         """
             说明：这里的目录结构， data/sub_data1/test|val/name1/im1.jpg
+            save embeddings:
+            test_embeddings.pth
+            {
+                'name' : [embd1, embd2]
+            }
+            val_embeddings.pth
+            {
+                'name' : [embd1, embd2]
+            }
+
         """
         list_dirs = os.listdir(facebank_path)
         for dir in list_dirs:
@@ -325,6 +348,61 @@ class CalFaceEmbd(BaseHandler):
                 tmp_path = os.path.join(embd_path, tmp_f)
                 if os.path.isdir(tmp_path):
                     rmtree(tmp_path)
+        return
+
+    # calcualte the facebank embeddings for ai-server
+    def method4(self, facebank_path, embd_path):
+        """
+            说明：这里的目录结构，(文档结构: name1/img1.jpg, name1/img2.jpg）中的
+            save embeddings:
+            {
+                'name' : {'data': [embeddings1, embeddings2], 'length': 2}
+            }
+        """
+        def collate_fn(x):
+            out_x, out_y = [], []
+            for xx, yy in x:
+                out_x.append(xx)
+                out_y.append(yy)
+            return out_x, out_y
+        dataset = datasets.ImageFolder(facebank_path)
+        dataset.idx_to_class = {i: c for c, i in dataset.class_to_idx.items()}
+        loader = DataLoader(dataset, collate_fn=collate_fn, num_workers=8, batch_size=1)
+        aligned = []
+        names = []
+        count = 0
+        ml_obj = ModelLoader()
+        mtcnn = ml_obj.load_mtcnn_model()
+        facenet = ml_obj.load_facenet_model()
+        for x, y in loader:
+            count += 1
+            x_aligned, prob = mtcnn(x, return_prob=True)
+            if x_aligned is not None:
+                aligned.extend(x_aligned)
+                names.extend([dataset.idx_to_class[i] for i in y])
+        facebank_step = 5
+        cur = 0
+        facebank_embd = torch.empty(0, 512)
+        while cur < len(aligned):
+            tmp_aligned = aligned[cur: cur + facebank_step]
+            tmp_aligned = torch.stack(tmp_aligned).to(device)
+            tmp_facebank_embd = facenet(tmp_aligned).detach().cpu()
+            facebank_embd = torch.cat([facebank_embd, tmp_facebank_embd], dim=0)
+            cur += facebank_step
+
+        # 整理facebank embeddings，算出平均的embeddings, 当前的数据长度也作为key的一部分，然后可以重新获取数据
+        facebank_embd_dict = {}
+        for i in range(len(names)):
+            if not names[i] in facebank_embd_dict:
+                facebank_embd_dict[names[i]] = {'data': [facebank_embd[i].float()], 'length': 1}
+            else:
+                facebank_embd_dict[names[i]]['data'].append(facebank_embd[i].float())
+                facebank_embd_dict[names[i]]['length'] += 1
+
+        # save names file and facebank embeddings file
+        create_dir(embd_path)
+        embd_path = os.path.join(embd_path, 'facebank.pth')
+        torch.save(facebank_embd_dict, embd_path)
         return
 
 class FaceGroup(BaseHandler):
@@ -478,5 +556,21 @@ class DeleteSingle(BaseHandler):
                 tmp_path = os.path.join(os.path.join(base_embd_path, parent_dir) , child_dir)
                 if len(os.listdir(tmp_path)) < 2:
                     remove_tree(tmp_path)
+
+        return
+
+class LoadFaceEmbd(BaseHandler):
+    """
+        读取特征向量
+    """
+    def get(self):
+        current_date = datetime.date.today().strftime('%Y%m%d')
+        source = self.get_argument('source', 'auto_machine')
+        embd_path = os.path.join(project_path, category, source, current_date + '_embd')
+        embd_path = os.path.join(embd_path, 'facebank.pth')
+        embd = torch.load(embd_path)
+        for k in embd:
+            print(embd[k]['length'])
+
 
         return
