@@ -381,7 +381,17 @@ class CalFaceEmbd(BaseHandler):
                 print('align - process: %s/%s'%(count, loader_length))
             count += 1
             #x_aligned, prob = mtcnn(x, return_prob=True)
-            x_aligned = [transforms.ToTensor()(tmp_x) for tmp_x in x]
+            x_aligned = []
+            for tmp_idx, tmp_v in enumerate(x):
+                try:
+                    tmp_x = transforms.ToTensor()(tmp_v)
+                    x_aligned.append(tmp_x)
+                except:
+                    print(dataset.idx_to_class[y[tmp_idx]])
+                    quit()
+
+
+            #x_aligned = [transforms.ToTensor()(tmp_x) for tmp_x in x]
             if x_aligned is not None:
                 aligned.extend(x_aligned)
                 names.extend([dataset.idx_to_class[i] for i in y])
