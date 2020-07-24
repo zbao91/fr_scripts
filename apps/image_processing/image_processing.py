@@ -571,6 +571,33 @@ class LoadFaceEmbd(BaseHandler):
         embd = torch.load(embd_path)
         for k in embd:
             print(embd[k]['length'])
+        return
 
+class ExtractImage(BaseHandler):
+    def get(self):
+        """
+            extract 1 image from each person
+        """
+        current_date = datetime.date.today().strftime('%Y%m%d')
+        source = self.get_argument('source', 'auto_machine')
+        facebank_path = os.path.join(project_path, category, source, current_date)
+        test_facebank_path = facebank_path + '_test'
+        names = os.listdir(facebank_path)
+        for name in names:
+            if name.startswith('.'):
+                continue
+            # get 1 image from this person
+            name_path = os.path.join(facebank_path, name)
+            imgs = os.listdir(name_path)
+            imgs = [i for i in imgs if not i.startswith('.')]
+            np.random.shuffle(imgs)
+            img = imgs[0]
+            org_img_path = os.path.join(name_path, img)
+            # get destination of img
+            new_path = os.path.join(test_facebank_path, name)
+            if not os.path.isdir(new_path):
+                os.makedirs(new_path)
+            dst_img_paht = os.path.join(test_facebank_path, name, img)
+            copyfile(org_img_path, dst_img_paht)
 
         return
