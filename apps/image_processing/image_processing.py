@@ -368,13 +368,17 @@ class CalFaceEmbd(BaseHandler):
         dataset = datasets.ImageFolder(facebank_path)
         dataset.idx_to_class = {i: c for c, i in dataset.class_to_idx.items()}
         loader = DataLoader(dataset, collate_fn=collate_fn, num_workers=8, batch_size=1)
+        loader_length = len(loader.dataset)
         aligned = []
         names = []
         count = 0
         ml_obj = ModelLoader()
         mtcnn = ml_obj.load_mtcnn_model()
         facenet = ml_obj.load_facenet_model()
+        print('start to align')
         for x, y in loader:
+            if count % 500 == 0:
+                print('align - process: %s/%s'%(count, loader_length))
             count += 1
             x_aligned, prob = mtcnn(x, return_prob=True)
             if x_aligned is not None:
@@ -389,6 +393,8 @@ class CalFaceEmbd(BaseHandler):
             tmp_facebank_embd = facenet(tmp_aligned).detach().cpu()
             facebank_embd = torch.cat([facebank_embd, tmp_facebank_embd], dim=0)
             cur += facebank_step
+            if cur % 500 == 0:
+                print('embedding calculation - process: %s/%s'%(cur, loader_length))
 
         # 整理facebank embeddings，算出平均的embeddings, 当前的数据长度也作为key的一部分，然后可以重新获取数据
         facebank_embd_dict = {}
