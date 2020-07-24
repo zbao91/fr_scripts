@@ -380,6 +380,7 @@ class CalFaceEmbd(BaseHandler):
             if count % 500 == 0:
                 print('align - process: %s/%s'%(count, loader_length))
             count += 1
+            x.to(device)
             x_aligned, prob = mtcnn(x, return_prob=True)
             if x_aligned is not None:
                 aligned.extend(x_aligned)
