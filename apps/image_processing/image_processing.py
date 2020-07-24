@@ -381,6 +381,9 @@ class CalFaceEmbd(BaseHandler):
                 print('align - process: %s/%s'%(count, loader_length))
             count += 1
             x_aligned, prob = mtcnn(x, return_prob=True)
+            for tmp_idx, tmp_v in enumerate(x_aligned):
+                if tmp_v is None:
+                    print(dataset.idx_to_class[y[tmp_idx]])
             if x_aligned is not None:
                 aligned.extend(x_aligned)
                 names.extend([dataset.idx_to_class[i] for i in y])
