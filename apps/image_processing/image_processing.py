@@ -18,6 +18,7 @@ from PIL import Image
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from shutil import copyfile, copy2, rmtree
 from pathlib import Path
+from guppy import hpy
 
 from ..handler import BaseHandler
 from models import ModelLoader
@@ -374,11 +375,13 @@ class CalFaceEmbd(BaseHandler):
         count = 0
         ml_obj = ModelLoader()
         mtcnn = ml_obj.load_mtcnn_model()
+        h = hpy()
         facenet = ml_obj.load_facenet_model()
         print('start to align')
         for x, y in loader:
             if count % 500 == 0:
                 print('align - process: %s/%s'%(count, loader_length))
+                print(h.heap())
             count += 1
             #x_aligned, prob = mtcnn(x, return_prob=True)
             x_aligned = []
@@ -389,12 +392,11 @@ class CalFaceEmbd(BaseHandler):
                 except:
                     print(dataset.idx_to_class[y[tmp_idx]])
                     quit()
-
-
             #x_aligned = [transforms.ToTensor()(tmp_x) for tmp_x in x]
             if x_aligned is not None:
                 aligned.extend(x_aligned)
                 names.extend([dataset.idx_to_class[i] for i in y])
+
         facebank_step = 5
         cur = 0
         facebank_embd = torch.empty(0, 512)
